@@ -7,7 +7,7 @@ const socket = new WebSocket(
 );
 
 const AGGREGATE_INDEX = "5";
-// const MESSAGE = "200";
+const NOT_TICKET = "500";
 
 socket.addEventListener("message", (e) => {
   const {
@@ -16,15 +16,14 @@ socket.addEventListener("message", (e) => {
     PRICE: newPrice,
     MESSAGE: message,
   } = JSON.parse(e.data);
-  if (type === "500") {
-    console.log(socket);
-  }
-  if (type !== AGGREGATE_INDEX || newPrice === undefined) {
+
+  if (type !== (AGGREGATE_INDEX || NOT_TICKET)) {
     return;
   }
+
   const handlers = tickersHandlers.get(currency) ?? [];
 
-  handlers.forEach((fn) => fn(newPrice));
+  handlers.forEach((fn) => fn(newPrice, type));
   console.log(handlers);
   console.log(type);
   console.log(currency);
@@ -85,6 +84,13 @@ function subscribeToTickerOnWs(ticker) {
   });
 }
 
+// function subscribeToBtcToUsd() {
+//   sendToWebSocket({
+//     action: "SubAdd",
+//     subs: [`5~CCCAGG~BTC~USD`],
+//   });
+// }
+
 function unsubscribeFromTickerOnWs(ticker) {
   sendToWebSocket({
     action: "SubRemove",
@@ -95,6 +101,8 @@ function unsubscribeFromTickerOnWs(ticker) {
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
+  // tickersHandlers.set("USD", [...subscribers, cb]);
+  // subscribeToBtcToUsd();
   subscribeToTickerOnWs(ticker);
   console.log(tickersHandlers);
 };

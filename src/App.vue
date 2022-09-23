@@ -115,7 +115,7 @@
             :key="ixd"
             @click="select(t)"
             :class="{
-              'border-4': selectedTicker === t,
+              'bg-red-300': t.type !== '5',
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
@@ -154,12 +154,15 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graph"
+        >
           <div
             v-for="(bar, idx) in normolizedGraph"
             :key="idx"
-            :style="{ height: `${bar}%` }"
-            class="bg-purple-800 border w-10"
+            :style="{ height: `${bar}%`, width: `${whidthCallGraph}px` }"
+            class="bg-purple-800 border"
           ></div>
         </div>
         <button
@@ -205,6 +208,8 @@ export default {
       tickers: [],
       selectedTicker: null,
       graph: [],
+      maxGraphElements: 1,
+      whidthCallGraph: 38,
       coinList: [],
       repeatCoin: false,
       message: null,
@@ -226,14 +231,29 @@ export default {
 
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
+      // this.tickers.push("BTC");
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice) =>
-          this.updateTicker(ticker.name, newPrice)
+        subscribeToTicker(ticker.name, (newPrice, type) =>
+          this.updateTicker(ticker.name, newPrice, type)
         );
       });
     }
+
+    // subscribeToTicker("USD", (newPrice, type) =>
+    //   this.updateTicker(USD, newPrice, type)
+    // );
+
     // setInterval(() => this.updateTickers(), 5000);
   },
+
+  mounted() {
+    window.addEventListener("resize", this.calculateMaxGraphElements);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener("resize", this.calculateMaxGraphElements);
+  },
+
   beforeMount() {
     this.getList();
   },
@@ -285,14 +305,27 @@ export default {
   },
 
   methods: {
-    updateTicker(tickerName, price) {
+    calculateMaxGraphElements() {
+      if (!this.$refs.graph) {
+        return;
+      }
+
+      this.maxGraphElements =
+        this.$refs.graph.clientWidth / this.whidthCallGraph;
+    },
+
+    updateTicker(tickerName, price, type) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
           if (t === this.selectedTicker) {
             this.graph.push(price);
+            while (this.graph.length > this.maxGraphElements) {
+              this.graph.shift();
+            }
           }
           t.price = price;
+          t.type = type;
         });
     },
     formatPrice(price) {
@@ -341,13 +374,14 @@ export default {
         const currentTicker = {
           name: this.ticker,
           price: "-",
+          type: "-",
         };
         this.tickers = [...this.tickers, currentTicker];
 
         this.filter = "";
         this.ticker = "";
-        subscribeToTicker(currentTicker.name, (newPrice) =>
-          this.updateTicker(currentTicker.name, newPrice)
+        subscribeToTicker(currentTicker.name, (newPrice, type) =>
+          this.updateTicker(currentTicker.name, newPrice, type)
         );
       } else this.repeatCoin = true;
       this.message = "Такой тикер уже добавлен";
@@ -383,9 +417,15 @@ export default {
     },
     selectedTicker() {
       this.graph = [];
+      this.$nextTick().then(this.calculateMaxGraphElements);
     },
     tickers() {
       localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+    },
+    maxGraphElements() {
+      while (this.graph.length > this.maxGraphElements) {
+        this.graph.shift();
+      }
     },
   },
 };
