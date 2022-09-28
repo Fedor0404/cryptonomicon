@@ -14,7 +14,7 @@ socket.addEventListener("message", (e) => {
     TYPE: type,
     FROMSYMBOL: currency,
     PRICE: newPrice,
-    MESSAGE: message,
+    // MESSAGE: message,
   } = JSON.parse(e.data);
 
   if (type !== (AGGREGATE_INDEX || NOT_TICKET)) {
@@ -24,10 +24,10 @@ socket.addEventListener("message", (e) => {
   const handlers = tickersHandlers.get(currency) ?? [];
 
   handlers.forEach((fn) => fn(newPrice, type));
-  console.log(handlers);
-  console.log(type);
-  console.log(currency);
-  console.log(message);
+  // console.log(handlers);
+  // console.log(type);
+  // console.log(currency);
+  // console.log(message);
 });
 
 // export const loadTickers = (tickers) =>
